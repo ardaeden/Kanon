@@ -1,7 +1,10 @@
 /*  SERIAL COMMANDS
- *                      Cmd   arg1          arg2          arg3                  arg4        arg5
- * Move Slide           m     steps         speed         dir (h-high, l-low)   -           -
+ * COMMAND              Cmd   arg1          arg2          arg3                  arg4        arg5
+ * ---------------------------------------------------------------------------------------------
+ * Move Slide           m     steps         speed         dir (t-top, b-bottom) -           -
  * Home                 h     -             -             -                     -           -
+ * Goto Position        g     position      speed
+ * report               r
  */
 
 String args[5];
@@ -20,17 +23,6 @@ void doSerialCommand() {
       args[argIndex] += message[i];
     }
 
-    // Serial.print(args[0]);
-    // Serial.print(" ");
-    // Serial.print(args[1]);
-    // Serial.print(" ");
-    // Serial.print(args[2]);
-    // Serial.print(" ");
-    // Serial.print(args[3]);
-    // Serial.print(" ");
-    // Serial.println(args[4]);
-    // Serial.println();
-
     if (args[0] != NULL) {
 
       // MOVE THE SLIDER
@@ -38,23 +30,62 @@ void doSerialCommand() {
         byte dir;
         long steps = args[1].toInt();
         int speed = args[2].toInt();
-        if (args[3] == "h") dir = HIGH;
-        if (args[3] == "l") dir = LOW;
-        String msg = "Moving slider " + args[3] + ", Steps=" + args[1] + ", speed=" + args[2];
+        if (args[3] == "b") dir = BOTTOM;
+        if (args[3] == "t") dir = TOP;
+        String msg = "Moving slider " + args[3] + ", Steps=" + args[1] + ", Speed=" + args[2];
         Serial.println(msg);
+        Serial.println();
         moveSlider(steps, speed, dir);
       }
 
       // HOME SLIDER
       else if (args[0] == "h") {
-        moveSlider(50000, 500, LOW);
+        moveSlider(100000, 100, BOTTOM);
+        Serial.println(sliderPos);
+        Serial.println();
       }
 
+      // GO TO POSITION
+      else if (args[0] == "g") {
+        long targetPos = args[1].toInt();
+        long distance = targetPos - sliderPos;
+        byte dir = (distance > 0) ? TOP : BOTTOM;
+        String msg = "Moving slider to Pos: " + args[1] + ", Steps=" + abs(distance) + ", Speed=" + args[2] + ", Direction=" + ((dir == TOP) ? "TOP" : "BOTTOM");
+        Serial.println(msg);
+        Serial.println();
+        moveSlider(abs(distance), args[2].toInt(), dir);
+      }
+      
+      else if (args[0] == "gr") {
+        float tp = 192000 * (1.0 - (float)args[2].toInt() / (float)args[1].toInt());
+        Serial.print("Target Position: ");
+        Serial.println(tp);
+        long targetPos = (long)tp;
+        long distance = targetPos - sliderPos;
+        byte dir = (distance > 0) ? TOP : BOTTOM;
+        //String msg = "Steps=" + abs(distance) + ", Speed=" + args[2] + ", Direction=" + ((dir == TOP) ? "TOP" : "BOTTOM");
+        //Serial.println(msg);
+        //Serial.println();
+        moveSlider(abs(distance), args[3].toInt(), dir);
+      }
+
+      //SHOW REPORT
+      else if (args[0] == "r") {
+        Serial.println("KANON SYSTEM REPORT");
+        Serial.println("-------------------");
+        Serial.print("BOTTOM is defined as: ");
+        Serial.println((BOTTOM == 1) ? "HIGH" : "LOW");
+        Serial.print("TOP is defined as: ");
+        Serial.println((TOP == 1) ? "HIGH" : "LOW");
+        Serial.print("Current slider position is: ");
+        Serial.println(sliderPos);
+        Serial.println();
+      }
 
       else {
         Serial.println("Unrecognized command!");
+        Serial.println();
       }
-
 
       // CLEAR ALL ARGUMENTS
       for (int i = 0; i < 5; i++) {
